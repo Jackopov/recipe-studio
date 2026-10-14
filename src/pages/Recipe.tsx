@@ -6,35 +6,30 @@ import {
   SectionLabel,
   SiteFooter,
   SiteHeader,
+  StarRating,
   navLinkClass,
 } from "@/components/RecipeUI";
-import {
-  builtinRecipes,
-  kickerLine,
-  resolvePhoto,
-  type Recipe,
-} from "@/data/recipes";
+import { kickerLine, resolvePhoto } from "@/data/recipes";
 import { docToRecipe } from "@/lib/recipe-doc";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { Link, useParams } from "react-router";
+import { toast } from "sonner";
 
 /**
- * The recipe itself: photo, story, timings, then ingredients, method and a
- * few notes from the kitchen. One long, quiet scroll — sized for a phone
- * held in one hand at the stove.
+ * The recipe itself: photo, story, timings, your rating, then ingredients,
+ * method and a few notes from the kitchen. One long, quiet scroll — sized
+ * for a phone held in one hand at the stove.
  */
 export default function RecipePage() {
   const { slug } = useParams();
   const stored = useQuery(api.recipes.getBySlug, { slug: slug ?? "" });
+  const setRating = useMutation(api.recipes.setRating);
 
-  const builtin = builtinRecipes.find((recipe) => recipe.slug === slug);
-  const recipe: Recipe | undefined =
-    builtin ?? (stored ? docToRecipe(stored) : undefined);
+  if (stored === undefined) return <PageSkeleton />;
 
-  // Starter recipes render instantly; database recipes wait for the query.
-  if (!builtin && stored === undefined) return <PageSkeleton />;
+  const recipe = stored ? docToRecipe(stored) : undefined;
 
-  if (!recipe) {
+  if (!recipe || !stored) {
     return (
       <div className="flex min-h-dvh flex-col">
         <SiteHeader
@@ -52,7 +47,7 @@ export default function RecipePage() {
             That recipe has wandered off.
           </h1>
           <p className="mt-4 max-w-prose text-[15px] leading-7 text-muted-foreground">
-            It may have been renamed, or the link is slightly off.
+            It may have been renamed or removed, or the link is slightly off.
           </p>
           <Link
             to="/recipes"
@@ -65,6 +60,14 @@ export default function RecipePage() {
       </div>
     );
   }
+
+  const handleRating = async (rating: number | null) => {
+    try {
+      await setRating({ recipeId: stored._id, rating });
+    } catch {
+      toast.error("The rating could not be saved. Try again.");
+    }
+  };
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -118,6 +121,32 @@ export default function RecipePage() {
               ]}
             />
           </header>
+
+          {/* Rating and editing — the recipe's own page in the studio log */}
+          <section className="mt-7 border-y border-border/70 py-5">
+            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                  Your rating
+                </p>
+                <StarRating
+                  value={recipe.rating}
+                  onChange={(rating) => void handleRating(rating)}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {recipe.rating
+                    ? "Tap a star to change it — the ✕ clears it."
+                    : "Tap a star to give it one to five."}
+                </p>
+              </div>
+              <Link
+                to={`/recipes/${recipe.slug}/edit`}
+                className={`inline-flex min-h-11 items-center border border-foreground/25 px-4 text-[11px] uppercase tracking-[0.18em] transition-colors hover:border-foreground/60 hover:bg-foreground/5 ${navLinkClass}`}
+              >
+                Edit this recipe
+              </Link>
+            </div>
+          </section>
 
           {/* Ingredients */}
           <section className="mt-12">

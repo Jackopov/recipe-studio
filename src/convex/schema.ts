@@ -64,6 +64,9 @@ const schema = defineSchema(
       ),
       steps: v.array(v.string()),
       tips: v.optional(v.array(v.string())),
+      // The owner's 1–5 star review; null/absent means unrated so far.
+      // The 1–5 range is enforced in the setRating mutation.
+      rating: v.optional(v.nullable(v.number())),
       createdAt: v.number(),
     })
       .index("by_slug", ["slug"])

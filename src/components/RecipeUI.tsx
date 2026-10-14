@@ -1,5 +1,5 @@
 import { categoryLabel, resolvePhoto, type Recipe } from "@/data/recipes";
-import { Plus } from "lucide-react";
+import { Plus, Star, X } from "lucide-react";
 import { Link } from "react-router";
 
 /**
@@ -185,7 +185,88 @@ export function RecipeCard({
       <p className="mt-1 text-xs text-muted-foreground">
         {times || "Open the recipe"}
       </p>
+      <Stars value={recipe.rating} className="mt-2" />
     </Link>
+  );
+}
+
+/** Five tappable stars — a recipe's own 1–5 review, editable at any time. */
+export function StarRating({
+  value,
+  onChange,
+  disabled = false,
+}: {
+  value: number | null;
+  onChange: (rating: number | null) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((star) => {
+        const filled = star <= (value ?? 0);
+        return (
+          <button
+            key={star}
+            type="button"
+            disabled={disabled}
+            aria-label={`${star} ${star === 1 ? "star" : "stars"}`}
+            aria-pressed={filled}
+            onClick={() => onChange(star === value ? null : star)}
+            className="inline-flex min-h-11 min-w-10 items-center justify-center transition-transform hover:scale-110 disabled:hover:scale-100"
+          >
+            <Star
+              aria-hidden
+              strokeWidth={1.5}
+              className={`size-[22px] ${
+                filled
+                  ? "fill-foreground text-foreground"
+                  : "text-foreground/25"
+              }`}
+            />
+          </button>
+        );
+      })}
+      {value !== null && !disabled ? (
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          aria-label="Clear rating"
+          className="ml-1 inline-flex min-h-11 items-center px-1.5 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <X className="size-3.5" aria-hidden />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+/** Small read-only stars for cards — hidden while a recipe is unrated. */
+export function Stars({
+  value,
+  className = "",
+}: {
+  value: number | null;
+  className?: string;
+}) {
+  if (!value) return null;
+  return (
+    <span
+      aria-label={`Rated ${value} out of 5 stars`}
+      className={`inline-flex items-center gap-0.5 ${className}`}
+    >
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Star
+          key={star}
+          aria-hidden
+          strokeWidth={1.5}
+          className={`size-3 ${
+            star <= value
+              ? "fill-foreground/80 text-foreground/80"
+              : "text-foreground/25"
+          }`}
+        />
+      ))}
+    </span>
   );
 }
 

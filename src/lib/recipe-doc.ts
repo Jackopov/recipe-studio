@@ -19,6 +19,8 @@ export function docToRecipe(doc: RecipeDoc): Recipe {
       src: doc.photoUrl ?? "",
       alt: doc.title,
       focus: "center",
+      // Unsplash photos are sized on render, like the original starters.
+      resize: doc.photoUrl?.includes("images.unsplash.com") ?? false,
     },
     prep: doc.prep ?? "—",
     cook: doc.cook ?? "—",
@@ -26,5 +28,6 @@ export function docToRecipe(doc: RecipeDoc): Recipe {
     ingredients: doc.ingredients,
     steps: doc.steps,
     tips: doc.tips,
+    rating: doc.rating ?? null,
   };
 }

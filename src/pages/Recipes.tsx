@@ -9,7 +9,6 @@ import {
 } from "@/components/RecipeUI";
 import {
   RECIPE_CATEGORIES,
-  builtinRecipes,
   type Recipe,
   type RecipeCategory,
 } from "@/data/recipes";
@@ -30,9 +29,7 @@ export default function RecipesDatabase() {
   const [filter, setFilter] = useState<Filter>("all");
 
   const collection: Recipe[] | null =
-    stored === undefined
-      ? null
-      : [...builtinRecipes, ...stored.map(docToRecipe)];
+    stored === undefined ? null : stored.map(docToRecipe);
 
   if (!collection) return <PageSkeleton />;
 

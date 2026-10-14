@@ -10,7 +10,6 @@ import {
   navLinkClass,
 } from "@/components/RecipeUI";
 import {
-  builtinRecipes,
   formatDate,
   kickerLine,
   resolvePhoto,
@@ -44,8 +43,48 @@ export default function Today() {
 
   if (stored === undefined) return <PageSkeleton />;
 
-  const collection = [...builtinRecipes, ...stored.map(docToRecipe)];
+  const collection = stored.map(docToRecipe);
   const today = todaysRecipe(collection);
+
+  // An empty studio still deserves a proper first screen.
+  if (!today) {
+    return (
+      <div className="flex min-h-dvh flex-col">
+        <SiteHeader
+          nav={
+            <Link to="/recipes" className={navLinkClass}>
+              Database
+            </Link>
+          }
+        />
+        <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-5 py-20">
+          <div className="flex items-baseline gap-3">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+              The special today
+            </p>
+            <span className="h-px flex-1 bg-border" />
+            <p className="text-[11px] text-muted-foreground">{formatDate()}</p>
+          </div>
+          <h1 className="mt-6 font-display text-[2.4rem] leading-[1.04] tracking-tight sm:text-6xl">
+            The studio is empty.
+          </h1>
+          <p className="mt-4 max-w-prose text-[15px] leading-7 text-muted-foreground">
+            Add the first recipe with the button in the corner — today&apos;s
+            special will be waiting right here.
+          </p>
+          <div className="mt-8">
+            <Link
+              to="/recipes/new"
+              className="inline-flex min-h-11 items-center justify-center bg-primary px-7 text-[11px] uppercase tracking-[0.2em] text-primary-foreground transition-opacity hover:opacity-90"
+            >
+              Add the first recipe
+            </Link>
+          </div>
+        </main>
+        <SiteFooter />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-dvh flex-col">
