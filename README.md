@@ -1,3 +1,43 @@
+# Recipe Studio
+
+A personal recipe book for the iPhone home screen: today's special on the
+first screen, the whole collection one scroll below, and a database you can
+add to, edit, rate (1–5 stars) and prune — all from the phone.
+
+- **First screen (`/`)** — the special of the day, picked deterministically
+  from the calendar date, so it stays put all day and rotates at midnight.
+- **Database (`/recipes`)** — every recipe with category shelves:
+  breakfast, lunch, snack, soup, dessert.
+- **Add (`/recipes/new`)** — photo straight from the photo library (resized
+  before upload), category, ingredients and steps as lists.
+- **Edit / rate / delete (`/recipes/:slug/edit`)** — same form, prefilled;
+  removal sits behind a two-step confirmation. Stars live on the recipe page.
+- **iPhone-ready** — standalone manifest, safe-area padding, generated
+  home-screen icons (`scripts/generate-icons.mjs`).
+
+## Deploying to GitHub
+
+The sandbox this was built in blocks git commands (the platform manages
+version control), so push from your own machine:
+
+```bash
+# option A — one script (creates the repo with the GitHub CLI)
+bash scripts/push-to-github.sh recipe-studio --private
+
+# option B — by hand
+git init && git add -A && git commit -m "Recipe Studio"
+git remote add origin git@github.com:<you>/recipe-studio.git
+git push -u origin main
+```
+
+`.env` files and `src/convex/_generated` are gitignored on purpose. After a
+fresh clone run `bun install` and `bun convex dev` once — Convex regenerates
+`src/convex/_generated` and asks which deployment to use — then `bun run dev`.
+A teammate also needs `VITE_CONVEX_URL` in `.env.local` (from the Convex
+dashboard) for the client to reach the backend.
+
+---
+
 ## Overview
 
 This project uses the following tech stack:
