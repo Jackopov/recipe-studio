@@ -4,4 +4,6 @@
 .env.local
 node_modules
 dist
-src/convex/_generated
+# NOTE: src/convex/_generated is committed on purpose — CI clones build
+# without Convex CLI auth, so the generated api/dataModel types must ship
+# with the repo. Regenerate locally with `bun convex dev`.

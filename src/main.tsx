@@ -84,7 +84,37 @@ class RootErrorBoundary extends React.Component<
   }
 }
 
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
+const convexUrl = import.meta.env.VITE_CONVEX_URL as string | undefined;
+
+/**
+ * A deployment without a backend URL used to crash at module scope and leave
+ * a blank page — the error boundary never even mounted. Show this instead.
+ */
+function BackendMissing() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
+      <div className="max-w-lg space-y-3 text-center">
+        <p className="font-display text-2xl tracking-tight">Recipe Studio</p>
+        <p className="text-sm leading-6 text-muted-foreground">
+          The backend address is missing in this deployment. Set{" "}
+          <code className="font-mono text-xs">VITE_CONVEX_URL</code> (Convex
+          dashboard → Settings → URL and Deploy Key) and rebuild — the app will
+          load right here.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+let convex: ConvexReactClient | null = null;
+try {
+  if (!convexUrl) {
+    throw new Error("VITE_CONVEX_URL is not set for this build.");
+  }
+  convex = new ConvexReactClient(convexUrl);
+} catch (error) {
+  console.error("[Recipe Studio] Convex client failed to start:", error);
+}
 
 function RouteSyncer() {
   const location = useLocation();
@@ -110,39 +140,43 @@ function RouteSyncer() {
 }
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <RootErrorBoundary>
-      <ToolbarErrorBoundary>
-        <VlyToolbar />
-      </ToolbarErrorBoundary>
-      <ConvexAuthProvider client={convex}>
-        <BrowserRouter>
-          <RouteSyncer />
-          <Suspense fallback={<RouteLoading />}>
-            <Routes>
-              <Route path="/" element={<Today />} />
-              <Route path="/recipes" element={<RecipesDatabase />} />
-              <Route path="/recipes/new" element={<NewRecipe />} />
-              <Route path="/recipes/:slug" element={<RecipePage />} />
-              <Route path="/recipes/:slug/edit" element={<EditRecipe />} />
-              <Route
-                path="/auth"
-                element={<AuthPage redirectAfterAuth="/dashboard" />}
-              />
-              <Route
-                path="/dashboard"
-                element={
-                  <RequireAuth>
-                    <Dashboard />
-                  </RequireAuth>
-                }
-              />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-        <Toaster />
-      </ConvexAuthProvider>
-    </RootErrorBoundary>
-  </StrictMode>,
+  convex ? (
+    <StrictMode>
+      <RootErrorBoundary>
+        <ToolbarErrorBoundary>
+          <VlyToolbar />
+        </ToolbarErrorBoundary>
+        <ConvexAuthProvider client={convex}>
+          <BrowserRouter>
+            <RouteSyncer />
+            <Suspense fallback={<RouteLoading />}>
+              <Routes>
+                <Route path="/" element={<Today />} />
+                <Route path="/recipes" element={<RecipesDatabase />} />
+                <Route path="/recipes/new" element={<NewRecipe />} />
+                <Route path="/recipes/:slug" element={<RecipePage />} />
+                <Route path="/recipes/:slug/edit" element={<EditRecipe />} />
+                <Route
+                  path="/auth"
+                  element={<AuthPage redirectAfterAuth="/dashboard" />}
+                />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <RequireAuth>
+                      <Dashboard />
+                    </RequireAuth>
+                  }
+                />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+          <Toaster />
+        </ConvexAuthProvider>
+      </RootErrorBoundary>
+    </StrictMode>
+  ) : (
+    <BackendMissing />
+  ),
 );

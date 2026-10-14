@@ -30,11 +30,13 @@ git remote add origin git@github.com:<you>/recipe-studio.git
 git push -u origin main
 ```
 
-`.env` files and `src/convex/_generated` are gitignored on purpose. After a
-fresh clone run `bun install` and `bun convex dev` once — Convex regenerates
-`src/convex/_generated` and asks which deployment to use — then `bun run dev`.
-A teammate also needs `VITE_CONVEX_URL` in `.env.local` (from the Convex
-dashboard) for the client to reach the backend.
+`.env` files are gitignored on purpose — never commit keys. The
+`src/convex/_generated` files **are** committed, so a CI clone can build
+without Convex CLI auth; after changing backend code run `bun convex dev` to
+refresh them and commit the result. After a fresh clone: `bun install`, then
+`bun run dev`. The client also needs `VITE_CONVEX_URL` (from the Convex
+dashboard → Settings) in `.env.local` or in the deploy environment — without
+it the app shows a setup notice instead of the studio.
 
 ---
 
