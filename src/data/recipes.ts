@@ -4,22 +4,43 @@ export type IngredientGroup = {
   items: string[];
 };
 
+/** The shelves in the recipe database. */
+export type RecipeCategory =
+  | "breakfast"
+  | "lunch"
+  | "snack"
+  | "soup"
+  | "dessert";
+
+export const RECIPE_CATEGORIES: { id: RecipeCategory; label: string }[] = [
+  { id: "breakfast", label: "Breakfast" },
+  { id: "lunch", label: "Lunch" },
+  { id: "snack", label: "Snack" },
+  { id: "soup", label: "Soup" },
+  { id: "dessert", label: "Dessert" },
+];
+
+export function categoryLabel(id: RecipeCategory): string {
+  return RECIPE_CATEGORIES.find((category) => category.id === id)?.label ?? id;
+}
+
 export type Recipe = {
   id: string;
   slug: string;
   title: string;
-  /** Small editorial label above the title, e.g. "Breakfast". */
-  kicker: string;
-  /** One-line italic subtitle. */
+  category: RecipeCategory;
+  /** One-line italic subtitle. May be empty. */
   note: string;
-  /** Short editorial intro shown under the title. */
+  /** Short editorial intro shown under the title. May be empty. */
   intro: string;
   photo: {
-    /** Base URL of the photo (Unsplash CDN, sized on render). */
+    /** Base URL of the photo (CDN photos are sized on render). */
     src: string;
     alt: string;
     /** CSS object-position for cropping. */
     focus?: string;
+    /** True for Unsplash CDN photos, which accept a width parameter. */
+    resize?: boolean;
   };
   prep: string;
   cook: string;
@@ -29,12 +50,17 @@ export type Recipe = {
   tips?: string[];
 };
 
-export const recipes: Recipe[] = [
+/**
+ * The three recipes the studio opened with. They live in code (edit them
+ * here); anything added from the app is stored in Convex and merged with
+ * these on the client.
+ */
+export const builtinRecipes: Recipe[] = [
   {
     id: "1",
     slug: "lemon-ricotta-pancakes",
     title: "Lemon Ricotta Pancakes",
-    kicker: "Breakfast",
+    category: "breakfast",
     note: "For slow, bright mornings",
     intro:
       "Tall and tender with a faint lemon lift — these are the pancakes we make when the morning is slow enough to warrant it. The ricotta keeps them soft for a long time, so nobody has to eat standing at the stove.",
@@ -42,6 +68,7 @@ export const recipes: Recipe[] = [
       src: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445",
       alt: "A stack of pancakes with fresh berries on a plate",
       focus: "center",
+      resize: true,
     },
     prep: "10 min",
     cook: "15 min",
@@ -87,7 +114,7 @@ export const recipes: Recipe[] = [
     id: "2",
     slug: "roasted-tomato-orzo",
     title: "Roasted Tomato Orzo",
-    kicker: "Supper",
+    category: "lunch",
     note: "One tray, one pot",
     intro:
       "Cherry tomatoes collapse into something jammy and sweet, then get tossed through orzo that has cooked in stock until it turns creamy on its own. It tastes like an afternoon of work.",
@@ -95,6 +122,7 @@ export const recipes: Recipe[] = [
       src: "https://images.unsplash.com/photo-1473093295043-cdd812d0e601",
       alt: "A pan of orzo with roasted cherry tomatoes and basil",
       focus: "center",
+      resize: true,
     },
     prep: "10 min",
     cook: "35 min",
@@ -140,7 +168,7 @@ export const recipes: Recipe[] = [
     id: "3",
     slug: "lemony-chickpea-herb-salad",
     title: "Lemony Chickpea & Herb Salad",
-    kicker: "Lunch",
+    category: "lunch",
     note: "The fridge-clearing bowl that stayed",
     intro:
       "Herbs by the fistful, feta in rubble, and enough lemon to wake up whatever else is in the crisper. It comes together in the time it takes the kettle to boil and keeps well for days.",
@@ -148,6 +176,7 @@ export const recipes: Recipe[] = [
       src: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd",
       alt: "A bowl of chickpea salad with fresh herbs and vegetables",
       focus: "center",
+      resize: true,
     },
     prep: "15 min",
     cook: "No cook",
@@ -191,20 +220,32 @@ export const recipes: Recipe[] = [
   },
 ];
 
-/** Resolve a recipe by its URL slug. */
+/** Resolve a recipe by its URL slug (starter recipes only). */
 export function recipeBySlug(slug?: string): Recipe | undefined {
-  return recipes.find((recipe) => recipe.slug === slug);
+  return builtinRecipes.find((recipe) => recipe.slug === slug);
+}
+
+/** Small stable hash so the special of the day does not jump around. */
+function hashString(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
 }
 
 /**
- * The special of the day. Deterministic on the calendar date, so the same
- * recipe is shown all day and it rotates at midnight — no server needed.
+ * The special of the day, picked from the whole collection. Deterministic on
+ * the calendar date — the same recipe shows all day and it rotates at
+ * midnight, no server round-trip needed.
  */
-export function todaysRecipe(date: Date = new Date()): Recipe {
-  const dayIndex = Math.floor(
-    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000,
-  );
-  return recipes[dayIndex % recipes.length] ?? recipes[0]!;
+export function todaysRecipe(
+  collection: Recipe[],
+  date: Date = new Date(),
+): Recipe {
+  const list = collection.length > 0 ? collection : builtinRecipes;
+  const key = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+  return list[hashString(key) % list.length]!;
 }
 
 /** e.g. "Sunday, 12 October" in the user's locale. */
@@ -216,7 +257,19 @@ export function formatDate(date: Date = new Date()): string {
   }).format(date);
 }
 
-/** Size a CDN photo for its context. */
+/** Size a CDN photo for its context; other photos are used as-is. */
 export function photoSrc(base: string, width: number): string {
   return `${base}?q=80&w=${width}&auto=format&fit=crop`;
+}
+
+/** Photo URL at the requested width (CDN photos only are resized). */
+export function resolvePhoto(photo: Recipe["photo"], width: number): string {
+  return photo.resize ? photoSrc(photo.src, width) : photo.src;
+}
+
+/** "Lunch · One tray, one pot" — category first, subtitle when present. */
+export function kickerLine(recipe: Recipe): string {
+  return [categoryLabel(recipe.category), recipe.note]
+    .filter(Boolean)
+    .join(" · ");
 }

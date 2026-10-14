@@ -1,15 +1,21 @@
+import { categoryLabel, resolvePhoto, type Recipe } from "@/data/recipes";
+import { Plus } from "lucide-react";
 import { Link } from "react-router";
 
 /**
  * Small editorial building blocks shared by the recipe screens: the masthead,
- * the gallery-style photo frame, section labels and the meta strip. Everything
- * is built on hairline rules and warm paper so the app reads like a folio.
+ * the gallery-style photo frame, section labels, the meta strip and the card
+ * used by both the homepage collection and the database.
  */
 
-export function SiteHeader({ right }: { right?: React.ReactNode }) {
+/** Shared style for quiet text links next to the Add button. */
+export const navLinkClass =
+  "text-[11px] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-foreground";
+
+export function SiteHeader({ nav }: { nav?: React.ReactNode }) {
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur">
-      <div className="mx-auto flex min-h-14 w-full max-w-3xl items-center justify-between gap-4 px-5 pb-2 pt-[calc(env(safe-area-inset-top)+0.5rem)]">
+      <div className="mx-auto flex min-h-14 w-full max-w-3xl items-center justify-between gap-3 px-5 pb-2 pt-[calc(env(safe-area-inset-top)+0.5rem)]">
         <Link to="/" className="group inline-flex items-center gap-2.5">
           <span className="flex size-5 items-center justify-center border border-foreground/40 transition-colors group-hover:border-foreground/70">
             <span className="size-1.5 rounded-full bg-foreground/70" />
@@ -18,7 +24,17 @@ export function SiteHeader({ right }: { right?: React.ReactNode }) {
             Recipe Studio
           </span>
         </Link>
-        {right}
+        <div className="flex items-center gap-3 sm:gap-5">
+          {nav}
+          <Link
+            to="/recipes/new"
+            aria-label="Add a recipe"
+            className="inline-flex min-h-11 items-center gap-1.5 border border-foreground/25 px-3 text-[11px] uppercase tracking-[0.18em] text-foreground transition-colors hover:border-foreground/60 hover:bg-foreground/5 sm:px-4"
+          >
+            <Plus className="size-3.5" aria-hidden />
+            Add
+          </Link>
+        </div>
       </div>
     </header>
   );
@@ -119,5 +135,77 @@ export function MetaStrip({
         </div>
       ))}
     </dl>
+  );
+}
+
+/** The card shared by the homepage collection and the database. */
+export function RecipeCard({
+  recipe,
+  badge,
+}: {
+  recipe: Recipe;
+  /** Small extra label after the category, e.g. "Today". */
+  badge?: string;
+}) {
+  const times = [
+    recipe.prep !== "—" ? `${recipe.prep} prep` : null,
+    recipe.cook !== "—" ? `${recipe.cook} cook` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  return (
+    <Link to={`/recipes/${recipe.slug}`} className="group block">
+      <div className="border border-border/80 bg-card p-1.5 transition-colors group-hover:border-foreground/35">
+        <div className="relative aspect-[3/2] overflow-hidden bg-secondary">
+          <img
+            src={resolvePhoto(recipe.photo, 800)}
+            alt={recipe.photo.alt}
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 size-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+            style={
+              recipe.photo.focus
+                ? { objectPosition: recipe.photo.focus }
+                : undefined
+            }
+            onError={(event) => {
+              event.currentTarget.style.display = "none";
+            }}
+          />
+        </div>
+      </div>
+      <p className="mt-3 text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+        {categoryLabel(recipe.category)}
+        {badge ? ` · ${badge}` : ""}
+      </p>
+      <h3 className="mt-1.5 font-display text-lg leading-snug tracking-tight">
+        {recipe.title}
+      </h3>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {times || "Open the recipe"}
+      </p>
+    </Link>
+  );
+}
+
+/** Shown while the recipe database is loading — matches the page it stands in for. */
+export function PageSkeleton() {
+  return (
+    <div className="flex min-h-dvh flex-col">
+      <SiteHeader />
+      <main className="mx-auto w-full max-w-3xl flex-1 px-5">
+        <div className="pt-7 sm:pt-12">
+          <div className="aspect-[4/5] animate-pulse bg-secondary sm:aspect-[3/2]" />
+          <div className="mt-6 h-4 w-40 animate-pulse bg-secondary" />
+          <div className="mt-3 h-9 w-3/4 animate-pulse bg-secondary" />
+          <div className="mt-5 space-y-2">
+            <div className="h-4 w-full animate-pulse bg-secondary" />
+            <div className="h-4 w-5/6 animate-pulse bg-secondary" />
+          </div>
+        </div>
+      </main>
+      <SiteFooter />
+    </div>
   );
 }

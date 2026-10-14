@@ -1,11 +1,21 @@
+import { api } from "@/convex/_generated/api";
 import {
   FramedPhoto,
   MetaStrip,
+  PageSkeleton,
   SectionLabel,
   SiteFooter,
   SiteHeader,
+  navLinkClass,
 } from "@/components/RecipeUI";
-import { photoSrc, recipeBySlug } from "@/data/recipes";
+import {
+  builtinRecipes,
+  kickerLine,
+  resolvePhoto,
+  type Recipe,
+} from "@/data/recipes";
+import { docToRecipe } from "@/lib/recipe-doc";
+import { useQuery } from "convex/react";
 import { Link, useParams } from "react-router";
 
 /**
@@ -15,12 +25,25 @@ import { Link, useParams } from "react-router";
  */
 export default function RecipePage() {
   const { slug } = useParams();
-  const recipe = recipeBySlug(slug);
+  const stored = useQuery(api.recipes.getBySlug, { slug: slug ?? "" });
+
+  const builtin = builtinRecipes.find((recipe) => recipe.slug === slug);
+  const recipe: Recipe | undefined =
+    builtin ?? (stored ? docToRecipe(stored) : undefined);
+
+  // Starter recipes render instantly; database recipes wait for the query.
+  if (!builtin && stored === undefined) return <PageSkeleton />;
 
   if (!recipe) {
     return (
       <div className="flex min-h-dvh flex-col">
-        <SiteHeader />
+        <SiteHeader
+          nav={
+            <Link to="/recipes" className={navLinkClass}>
+              Database
+            </Link>
+          }
+        />
         <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-start justify-center px-5 py-24">
           <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
             Not in the collection
@@ -32,10 +55,10 @@ export default function RecipePage() {
             It may have been renamed, or the link is slightly off.
           </p>
           <Link
-            to="/"
+            to="/recipes"
             className="mt-8 inline-flex min-h-11 items-center justify-center bg-primary px-7 text-[11px] uppercase tracking-[0.2em] text-primary-foreground transition-opacity hover:opacity-90"
           >
-            Back to today&apos;s special
+            Open the database
           </Link>
         </main>
         <SiteFooter />
@@ -46,12 +69,9 @@ export default function RecipePage() {
   return (
     <div className="flex min-h-dvh flex-col">
       <SiteHeader
-        right={
-          <Link
-            to="/"
-            className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-foreground"
-          >
-            All recipes
+        nav={
+          <Link to="/recipes" className={navLinkClass}>
+            Database
           </Link>
         }
       />
@@ -60,16 +80,16 @@ export default function RecipePage() {
         <nav className="pt-6">
           <Link
             to="/"
-            className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-foreground"
+            className={`inline-flex items-center gap-2 ${navLinkClass}`}
           >
-            <span aria-hidden>←</span> The collection
+            <span aria-hidden>←</span> Today&apos;s special
           </Link>
         </nav>
 
         <article>
           <div className="mt-5">
             <FramedPhoto
-              src={photoSrc(recipe.photo.src, 1600)}
+              src={resolvePhoto(recipe.photo, 1600)}
               alt={recipe.photo.alt}
               focus={recipe.photo.focus}
               ratio="aspect-[4/5] sm:aspect-[3/2]"
@@ -79,14 +99,16 @@ export default function RecipePage() {
 
           <header className="mt-7">
             <p className="font-display text-sm italic text-muted-foreground">
-              {recipe.kicker} · {recipe.note}
+              {kickerLine(recipe)}
             </p>
             <h1 className="mt-2 font-display text-[2.25rem] leading-[1.05] tracking-tight sm:text-5xl">
               {recipe.title}
             </h1>
-            <p className="mt-4 max-w-prose text-[15px] leading-7 text-muted-foreground">
-              {recipe.intro}
-            </p>
+            {recipe.intro ? (
+              <p className="mt-4 max-w-prose text-[15px] leading-7 text-muted-foreground">
+                {recipe.intro}
+              </p>
+            ) : null}
             <MetaStrip
               className="mt-7"
               items={[
@@ -169,12 +191,18 @@ export default function RecipePage() {
             </section>
           ) : null}
 
-          <div className="mt-14 border-t border-border/70 pt-6">
+          <div className="mt-14 flex flex-wrap items-center justify-between gap-4 border-t border-border/70 pt-6">
             <Link
               to="/"
-              className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-foreground"
+              className={`inline-flex items-center gap-2 ${navLinkClass}`}
             >
-              <span aria-hidden>←</span> Back to all recipes
+              <span aria-hidden>←</span> Today&apos;s special
+            </Link>
+            <Link
+              to="/recipes"
+              className={`inline-flex items-center gap-2 ${navLinkClass}`}
+            >
+              The database <span aria-hidden>→</span>
             </Link>
           </div>
         </article>

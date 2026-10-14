@@ -1,4 +1,4 @@
-import '@vly-ai/integrations';
+import "@vly-ai/integrations";
 import { Toaster } from "@/components/ui/sonner";
 import { RequireAuth } from "@/components/RequireAuth";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
@@ -11,6 +11,8 @@ import "./index.css";
 
 // Lazy load route components for better code splitting
 const Today = lazy(() => import("./pages/Today.tsx"));
+const RecipesDatabase = lazy(() => import("./pages/Recipes.tsx"));
+const NewRecipe = lazy(() => import("./pages/NewRecipe.tsx"));
 const RecipePage = lazy(() => import("./pages/Recipe.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
@@ -83,8 +85,6 @@ class RootErrorBoundary extends React.Component<
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
-
-
 function RouteSyncer() {
   const location = useLocation();
   useEffect(() => {
@@ -108,7 +108,6 @@ function RouteSyncer() {
   return null;
 }
 
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <RootErrorBoundary>
@@ -121,6 +120,8 @@ createRoot(document.getElementById("root")!).render(
           <Suspense fallback={<RouteLoading />}>
             <Routes>
               <Route path="/" element={<Today />} />
+              <Route path="/recipes" element={<RecipesDatabase />} />
+              <Route path="/recipes/new" element={<NewRecipe />} />
               <Route path="/recipes/:slug" element={<RecipePage />} />
               <Route
                 path="/auth"

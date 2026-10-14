@@ -16,6 +16,16 @@ export const roleValidator = v.union(
 );
 export type Role = Infer<typeof roleValidator>;
 
+// Recipe database categories (breakfast, lunch, snack, soup, dessert).
+export const categoryValidator = v.union(
+  v.literal("breakfast"),
+  v.literal("lunch"),
+  v.literal("snack"),
+  v.literal("soup"),
+  v.literal("dessert"),
+);
+export type RecipeCategory = Infer<typeof categoryValidator>;
+
 const schema = defineSchema(
   {
     // default auth tables using convex auth.
@@ -32,7 +42,32 @@ const schema = defineSchema(
       role: v.optional(roleValidator), // role of the user. do not remove
     }).index("email", ["email"]), // index for the email. do not remove or modify
 
-    // add other tables here
+    // The recipe database: recipes added from the app live here. The three
+    // starter recipes ship in src/data/recipes.ts and are merged in on the
+    // client, so no seeding is required.
+    recipes: defineTable({
+      title: v.string(),
+      slug: v.string(),
+      category: categoryValidator,
+      note: v.optional(v.string()), // short italic subtitle
+      intro: v.optional(v.string()), // one editorial paragraph
+      photoStorageId: v.optional(v.string()), // uploaded photo (Convex storage)
+      photoUrl: v.optional(v.string()), // or an external image link
+      prep: v.optional(v.string()),
+      cook: v.optional(v.string()),
+      serves: v.optional(v.string()),
+      ingredients: v.array(
+        v.object({
+          section: v.optional(v.string()),
+          items: v.array(v.string()),
+        }),
+      ),
+      steps: v.array(v.string()),
+      tips: v.optional(v.array(v.string())),
+      createdAt: v.number(),
+    })
+      .index("by_slug", ["slug"])
+      .index("by_created_at", ["createdAt"]),
 
     // tableName: defineTable({
     //   ...

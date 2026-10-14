@@ -1,18 +1,24 @@
+import { api } from "@/convex/_generated/api";
 import {
   FramedPhoto,
   MetaStrip,
+  PageSkeleton,
+  RecipeCard,
   SectionLabel,
   SiteFooter,
   SiteHeader,
+  navLinkClass,
 } from "@/components/RecipeUI";
 import {
+  builtinRecipes,
   formatDate,
-  photoSrc,
-  recipes,
+  kickerLine,
+  resolvePhoto,
   todaysRecipe,
-  type Recipe,
 } from "@/data/recipes";
+import { docToRecipe } from "@/lib/recipe-doc";
 import { motion, useReducedMotion } from "framer-motion";
+import { useQuery } from "convex/react";
 import { Link } from "react-router";
 
 /**
@@ -22,7 +28,7 @@ import { Link } from "react-router";
  */
 export default function Today() {
   const reduceMotion = useReducedMotion();
-  const today = todaysRecipe();
+  const stored = useQuery(api.recipes.list);
   const rise = (delay: number) =>
     reduceMotion
       ? {}
@@ -36,16 +42,18 @@ export default function Today() {
           },
         };
 
+  if (stored === undefined) return <PageSkeleton />;
+
+  const collection = [...builtinRecipes, ...stored.map(docToRecipe)];
+  const today = todaysRecipe(collection);
+
   return (
     <div className="flex min-h-dvh flex-col">
       <SiteHeader
-        right={
-          <a
-            href="#collection"
-            className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Collection
-          </a>
+        nav={
+          <Link to="/recipes" className={navLinkClass}>
+            Database
+          </Link>
         }
       />
 
@@ -66,7 +74,7 @@ export default function Today() {
             aria-label={`Open the recipe for ${today.title}`}
           >
             <FramedPhoto
-              src={photoSrc(today.photo.src, 1600)}
+              src={resolvePhoto(today.photo, 1600)}
               alt={today.photo.alt}
               focus={today.photo.focus}
               ratio="aspect-[4/5] sm:aspect-[3/2]"
@@ -75,7 +83,7 @@ export default function Today() {
           </Link>
 
           <p className="mt-6 font-display text-sm italic text-muted-foreground">
-            {today.kicker} · {today.note}
+            {kickerLine(today)}
           </p>
           <h1 className="mt-2 font-display text-[2.4rem] leading-[1.04] tracking-tight sm:text-6xl">
             {today.title}
@@ -101,7 +109,7 @@ export default function Today() {
               Cook this today
             </Link>
             <p className="text-xs text-muted-foreground">
-              Rotates daily · {recipes.length} recipes in the studio
+              Rotates daily · {collection.length} recipes in the studio
             </p>
           </div>
         </motion.section>
@@ -112,7 +120,16 @@ export default function Today() {
           id="collection"
           className="mt-16 scroll-mt-20 sm:mt-24"
         >
-          <SectionLabel right={`${recipes.length} recipes`}>
+          <SectionLabel
+            right={
+              <Link
+                to="/recipes"
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {collection.length} recipes →
+              </Link>
+            }
+          >
             The collection
           </SectionLabel>
           <p className="mt-4 max-w-prose text-sm leading-6 text-muted-foreground">
@@ -121,11 +138,11 @@ export default function Today() {
           </p>
 
           <ul className="mt-7 grid gap-8 sm:grid-cols-3 sm:gap-6">
-            {recipes.map((recipe) => (
+            {collection.map((recipe) => (
               <li key={recipe.id}>
-                <CollectionCard
+                <RecipeCard
                   recipe={recipe}
-                  isToday={recipe.id === today.id}
+                  badge={recipe.id === today.id ? "Today" : undefined}
                 />
               </li>
             ))}
@@ -135,47 +152,5 @@ export default function Today() {
 
       <SiteFooter />
     </div>
-  );
-}
-
-function CollectionCard({
-  recipe,
-  isToday,
-}: {
-  recipe: Recipe;
-  isToday: boolean;
-}) {
-  return (
-    <Link to={`/recipes/${recipe.slug}`} className="group block">
-      <div className="border border-border/80 bg-card p-1.5 transition-colors group-hover:border-foreground/35">
-        <div className="relative aspect-[3/2] overflow-hidden bg-secondary">
-          <img
-            src={photoSrc(recipe.photo.src, 800)}
-            alt={recipe.photo.alt}
-            loading="lazy"
-            decoding="async"
-            className="absolute inset-0 size-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
-            style={
-              recipe.photo.focus
-                ? { objectPosition: recipe.photo.focus }
-                : undefined
-            }
-            onError={(event) => {
-              event.currentTarget.style.display = "none";
-            }}
-          />
-        </div>
-      </div>
-      <p className="mt-3 text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-        {recipe.kicker}
-        {isToday ? " · Today" : ""}
-      </p>
-      <h3 className="mt-1.5 font-display text-lg leading-snug tracking-tight">
-        {recipe.title}
-      </h3>
-      <p className="mt-1 text-xs text-muted-foreground">
-        {recipe.prep} prep · {recipe.cook} cook
-      </p>
-    </Link>
   );
 }
