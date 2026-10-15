@@ -22,7 +22,8 @@ const CRC_TABLE = (() => {
 
 function crc32(buf) {
   let c = -1;
-  for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+  for (let i = 0; i < buf.length; i++)
+    c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
   return (c ^ -1) >>> 0;
 }
 
@@ -79,7 +80,8 @@ function draw(size, path, maskable = false) {
     for (let x = 0; x < S; x++) {
       const px = x + 0.5;
       const py = y + 0.5;
-      const inBox = px >= i0 - ft && px <= i1 + ft && py >= i0 - ft && py <= i1 + ft;
+      const inBox =
+        px >= i0 - ft && px <= i1 + ft && py >= i0 - ft && py <= i1 + ft;
       const onEdge =
         px >= i0 - ft && px <= i0 + ft && py >= i0 - ft && py <= i1 + ft;
       const onEdge2 =

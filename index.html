@@ -3,26 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-    <link rel="manifest" href="/manifest.webmanifest" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
+    <title>Recipe Studio — Your recipes, beautifully kept</title>
     <meta
       name="description"
-      content="Recipe Studio — your recipes, beautifully kept. Today's special on the first screen."
+      content="An editorial recipe notebook that lives on your device. Today's special on the first screen, every dish matted and framed like a print."
     />
     <meta name="theme-color" content="#F6F3EE" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Recipes" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <title>Recipe Studio</title>
+    <meta property="og:title" content="Recipe Studio" />
+    <meta
+      property="og:description"
+      content="Your recipes, beautifully kept. Today's special on the first screen."
+    />
+    <meta property="og:type" content="website" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/src/styles.css" />
   </head>
-
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="app">
+      <noscript>
+        Recipe Studio is a small offline notebook and needs JavaScript to open.
+      </noscript>
+    </div>
+    <script type="module" src="/src/app.js"></script>
   </body>
 </html>
