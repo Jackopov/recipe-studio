@@ -67,7 +67,8 @@ A recipe record (see `src/store.js`) looks like:
 {
   id, slug, title, category,      // breakfast | lunch | snack | soup | dessert
   note, intro,                    // italic kicker, editorial paragraph
-  photo: { src, alt, focus, resize },
+  photo: { src, alt, focus, resize },  // the cover
+  photos: [string],                    // optional gallery — process shots etc.
   prep, cook, serves,             // free-text; "—" when absent
   ingredients: [string],              // one flat list — no sections/groups
   steps: [string],
@@ -80,7 +81,8 @@ A recipe record (see `src/store.js`) looks like:
 The store persists to `localStorage` under
 `recipe-studio:collection:v1`. The first load copies the seed collection in;
 afterwards the stored list wins. Saves from older versions that still stored
-ingredients as groups (`{ section?, items: [...] }`) are flattened on read. Uploaded photos are downscaled
+ingredients as groups (`{ section?, items: [...] }`) are flattened on read, and saves without the
+`photos` gallery simply get an empty one. Uploaded photos are downscaled
 (`lib/photo.js`) and embedded as data URLs, so nothing ever leaves the
 device. The slug is generated once from the title and never changes, which
 keeps links stable.

@@ -15,19 +15,23 @@ function clone(value) {
 }
 
 /**
- * Ingredients used to be stored as groups ({ section?, items: [...] }); the
- * collection is one flat list now, so older saves are unwrapped on read.
+ * Bring older saves up to the current shape on read: ingredients used to be
+ * groups ({ section?, items: [...] }) and recipes had no photo gallery yet.
  */
 function migrateRecipe(recipe) {
   const ingredients = recipe.ingredients;
-  if (!Array.isArray(ingredients) || ingredients.length === 0) return recipe;
-  if (ingredients.every((entry) => typeof entry === "string")) return recipe;
-  return {
-    ...recipe,
-    ingredients: ingredients.flatMap((group) =>
-      Array.isArray(group?.items) ? group.items : [],
-    ),
-  };
+  const grouped =
+    Array.isArray(ingredients) &&
+    ingredients.length > 0 &&
+    !ingredients.every((entry) => typeof entry === "string");
+  const flat = grouped
+    ? ingredients.flatMap((group) =>
+        Array.isArray(group?.items) ? group.items : [],
+      )
+    : ingredients;
+  const photos = Array.isArray(recipe.photos) ? recipe.photos : [];
+  if (flat === ingredients && photos === recipe.photos) return recipe;
+  return { ...recipe, ingredients: flat, photos };
 }
 
 function read() {
@@ -44,7 +48,7 @@ function read() {
   } catch (error) {
     console.warn("[Recipe Studio] Could not read storage:", error);
   }
-  cache = clone(SEED_RECIPES);
+  cache = clone(SEED_RECIPES).map(migrateRecipe);
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
   } catch (error) {
@@ -57,7 +61,14 @@ function read() {
 function commit(list) {
   // Persists first: if the quota is full the in-memory copy stays untouched,
   // so the rendered pages never drift from what is stored.
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  } catch {
+    // A few dozen uploaded photos can fill the small localStorage.
+    throw new Error(
+      "This device is out of storage for the notebook — remove a few photos or recipes and try again.",
+    );
+  }
   cache = list;
 }
 
@@ -125,6 +136,7 @@ export function createRecipe(values) {
     note: values.note || "",
     intro: values.intro || "",
     photo: photoEntry(values.title, values.photoSrc, values.photoAlt),
+    photos: values.photos ?? [],
     prep: values.prep || "—",
     cook: values.cook || "—",
     serves: values.serves || "—",
@@ -158,6 +170,7 @@ export function updateRecipe(slug, values) {
     photo: values.photoSrc
       ? photoEntry(values.title, values.photoSrc, values.photoAlt)
       : existing.photo,
+    photos: values.photos ?? existing.photos,
     prep: values.prep || "—",
     cook: values.cook || "—",
     serves: values.serves || "—",

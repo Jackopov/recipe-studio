@@ -1,7 +1,8 @@
 /**
  * The shared editor behind "New recipe" and "Edit recipe": title, note, intro,
- * photograph (file → local data URL or a direct link), meta fields, the
- * ingredient list, steps and tips — plus validation and the local save.
+ * photograph (file → local data URL or a direct link), extra gallery photos,
+ * meta fields, the ingredient list, steps and tips — plus validation and the
+ * local save.
  */
 
 import { createRecipe, getRecipe, updateRecipe } from "../store.js";
@@ -22,6 +23,16 @@ function photoFromValue(value) {
   }
 }
 
+/** A short human label for a gallery photo row. */
+function photoLabel(src) {
+  if (src.startsWith("data:")) return "Uploaded photo — kept on this device";
+  try {
+    return new URL(src).hostname.replace(/^www\./, "");
+  } catch {
+    return src;
+  }
+}
+
 function defaultsFor(recipe) {
   if (!recipe) {
     return {
@@ -32,6 +43,8 @@ function defaultsFor(recipe) {
       intro: "",
       photoValue: "",
       photoAlt: "",
+      photos: [],
+      photoAddUrl: "",
       prep: "",
       cook: "",
       serves: "",
@@ -48,6 +61,8 @@ function defaultsFor(recipe) {
     intro: recipe.intro ?? "",
     photoValue: recipe.photo.src,
     photoAlt: recipe.photo.alt ?? "",
+    photos: [...(recipe.photos ?? [])],
+    photoAddUrl: "",
     prep: recipe.prep === "—" ? "" : recipe.prep,
     cook: recipe.cook === "—" ? "" : recipe.cook,
     serves: recipe.serves === "—" ? "" : recipe.serves,
@@ -75,6 +90,13 @@ export function renderRecipeForm(
         value="${escapeHtml(item)}" data-item="${index}">
       <button type="button" class="btn btn--ghost btn--small" data-item-remove="${index}"
         ${draft.ingredients.length === 1 ? "disabled" : ""}>×</button>
+    </li>`;
+
+  const extraPhotoMarkup = (src, index) => `
+    <li class="group__item photo-row" data-photo="${escapeHtml(src)}">
+      <img class="photo-row__thumb" src="${escapeHtml(src)}" alt="" loading="lazy" decoding="async">
+      <span class="photo-row__label">${escapeHtml(photoLabel(src))}</span>
+      <button type="button" class="btn btn--ghost btn--small" data-photo-remove="${index}">×</button>
     </li>`;
 
   const stepMarkup = (step, index) => `
@@ -171,6 +193,27 @@ export function renderRecipeForm(
                 value="${escapeHtml(draft.photoAlt)}" data-photo-alt>
             </div>
 
+            <section class="form-section">
+              ${sectionLabel("More photos", '<span class="section-label__right">optional</span>')}
+              <p class="field-hint">
+                Beyond the cover — process shots or the recipe written on a page.
+              </p>
+              <ul class="group__items" data-photo-list>
+                ${draft.photos.map(extraPhotoMarkup).join("")}
+              </ul>
+              <div class="photo-pick__controls">
+                <input class="input" type="url" placeholder="https://… image link"
+                  value="${escapeHtml(draft.photoAddUrl)}" data-photo-add-url>
+                <div class="photo-add-actions">
+                  <button type="button" class="nav-link" data-photo-add>+ Add photo</button>
+                  <label class="nav-link photo-pick__file">
+                    or upload a file
+                    <input type="file" accept="image/*" data-photo-add-file hidden>
+                  </label>
+                </div>
+              </div>
+            </section>
+
             <div class="field field--split">
               <div>
                 <label class="field-label" for="f-prep">Prep</label>
@@ -247,6 +290,10 @@ export function renderRecipeForm(
       prep: $("#f-prep").value.trim() || "—",
       cook: $("#f-cook").value.trim() || "—",
       serves: $("#f-serves").value.trim() || "—",
+      photos: [...root.querySelectorAll("[data-photo]")].map(
+        (element) => element.dataset.photo,
+      ),
+      photoAddUrl: root.querySelector("[data-photo-add-url]")?.value ?? "",
       // Read raw so empty placeholder rows survive a re-render; values are
       // trimmed and empty ones dropped only when the recipe is saved.
       ingredients: [...root.querySelectorAll("[data-item]")].map(
@@ -323,6 +370,63 @@ export function renderRecipeForm(
         }
       });
 
+    // Extra gallery photos: add from a link or an uploaded file.
+    const addPhoto = (src) => {
+      syncDraft();
+      draft.photos.push(src);
+      draft.photoAddUrl = "";
+      render();
+    };
+
+    root.querySelector("[data-photo-add]")?.addEventListener("click", () => {
+      const input = root.querySelector("[data-photo-add-url]");
+      const photo = photoFromValue(input?.value);
+      if (!photo) {
+        if (input?.value.trim()) {
+          toast("That does not look like an image link.", "error");
+          input?.focus();
+        }
+        return;
+      }
+      addPhoto(photo.src);
+    });
+
+    root
+      .querySelector("[data-photo-add-url]")
+      ?.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          root.querySelector("[data-photo-add]")?.click();
+        }
+      });
+
+    root
+      .querySelector("[data-photo-add-file]")
+      ?.addEventListener("change", async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (file.size > 12_000_000) {
+          toast("That photo is over 12 MB — pick a smaller one.", "error");
+          return;
+        }
+        try {
+          // Downscaled and re-encoded, like the cover, so gallery photos
+          // still fit localStorage.
+          addPhoto(await photoToDataUrl(file));
+        } catch {
+          toast("Could not read that photo — try a different file.", "error");
+        }
+      });
+
+    root.querySelectorAll("[data-photo-remove]").forEach((button) =>
+      button.addEventListener("click", () => {
+        const index = Number(button.dataset.photoRemove);
+        syncDraft();
+        draft.photos.splice(index, 1);
+        render();
+      }),
+    );
+
     // Pull everything currently typed into the draft. Mutations (adding or
     // removing a row) run *after* this — reading the DOM again afterwards
     // would throw away the row that was just added.
@@ -334,6 +438,8 @@ export function renderRecipeForm(
       draft.category = current.category;
       draft.photoValue = current.photoValue;
       draft.photoAlt = current.photoAlt;
+      draft.photos = current.photos;
+      draft.photoAddUrl = current.photoAddUrl;
       draft.prep = current.prep === "—" ? "" : current.prep;
       draft.cook = current.cook === "—" ? "" : current.cook;
       draft.serves = current.serves === "—" ? "" : current.serves;
@@ -419,6 +525,7 @@ export function renderRecipeForm(
       const ingredients = clean(data.ingredients);
       const steps = clean(data.steps);
       const tips = clean(data.tips);
+      const photos = clean(data.photos);
       if (!ingredients.length || !steps.length) {
         errorBox.hidden = false;
         errorBox.textContent =
@@ -433,6 +540,7 @@ export function renderRecipeForm(
         intro: data.intro,
         photoSrc: photo.src,
         photoAlt: data.photoAlt,
+        photos,
         prep: data.prep,
         cook: data.cook,
         serves: data.serves,

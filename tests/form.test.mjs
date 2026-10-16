@@ -18,6 +18,7 @@ globalThis.history = window.history;
 globalThis.location = window.location;
 globalThis.PopStateEvent = window.PopStateEvent;
 globalThis.HTMLImageElement = window.HTMLImageElement;
+globalThis.FileReader = window.FileReader;
 globalThis.requestAnimationFrame = (callback) => setTimeout(callback, 0);
 
 // Old-style stored recipe (grouped ingredients) to prove the migration.
@@ -67,6 +68,7 @@ const click = (element) => {
   assert.ok(element, "element to click must exist");
   element.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
 };
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 const root = document.createElement("div");
 root.id = "app";
@@ -84,6 +86,10 @@ document.body.appendChild(root);
     JSON.stringify(migrated.ingredients) ===
       JSON.stringify(["1 onion", "2 carrots"]),
     "sections are dropped, items kept in order",
+  );
+  check(
+    JSON.stringify(migrated.photos) === JSON.stringify([]),
+    "saves without a gallery get an empty photos list",
   );
 }
 
@@ -211,5 +217,111 @@ check(
   window.location.pathname.endsWith("/recipes/old-stew"),
   `edit navigates back to the same recipe, got ${window.location.pathname}`,
 );
+check(
+  JSON.stringify(getRecipe("old-stew").photos) === JSON.stringify([]),
+  "editing without touching the gallery keeps it empty",
+);
+
+/* ---------- extra photos: add, remove, save ---------- */
+renderRecipeForm(root, { nav: "", mode: "new" });
+check($$("[data-photo-add]").length === 1, "form has an add-photo button");
+check($$("[data-photo]").length === 0, "gallery starts empty");
+
+one("[data-photo-add-url]").value = "https://images.unsplash.com/photo-111";
+click(one("[data-photo-add]"));
+check($$("[data-photo]").length === 1, "click add-photo → 1 row");
+check(
+  $$("[data-photo]")[0].dataset.photo ===
+    "https://images.unsplash.com/photo-111",
+  "row stores the link",
+);
+check(
+  one("[data-photo-add-url]").value === "",
+  "the link input clears after adding",
+);
+
+one("[data-photo-add-url]").value = "not a url";
+click(one("[data-photo-add]"));
+check($$("[data-photo]").length === 1, "an invalid link adds nothing");
+
+one("[data-photo-add-url]").value = "https://images.unsplash.com/photo-222";
+click(one("[data-photo-add]"));
+check($$("[data-photo]").length === 2, "second photo added");
+
+// Enter in the link field acts as the add button.
+one("[data-photo-add-url]").value = "https://images.unsplash.com/photo-333";
+one("[data-photo-add-url]").dispatchEvent(
+  new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+);
+check($$("[data-photo]").length === 3, "Enter adds the photo too");
+click($$("[data-photo-remove]")[2]);
+check($$("[data-photo]").length === 2, "the Enter-added row can be removed");
+
+// Uploading a small jpeg appends a data-URL row — files this small skip the
+// canvas re-encode in lib/photo.js, so the FileReader path is enough here.
+const uploadInput = one("[data-photo-add-file]");
+const upload = new window.File([new Uint8Array([255, 216, 255])], "shot.jpg", {
+  type: "image/jpeg",
+});
+Object.defineProperty(uploadInput, "files", {
+  value: [upload],
+  configurable: true,
+});
+uploadInput.dispatchEvent(new window.Event("change", { bubbles: true }));
+// The FileReader inside lib/photo.js resolves on its own task.
+for (let i = 0; i < 20 && $$("[data-photo]").length < 3; i++) await tick();
+check(
+  $$("[data-photo]").length === 3,
+  `uploaded photo lands as a row (toasts: ${[
+    ...document.querySelectorAll(".toast"),
+  ]
+    .map((t) => t.textContent)
+    .join(" | ")})`,
+);
+check(
+  $$("[data-photo]")[2].dataset.photo.startsWith("data:image/jpeg"),
+  "the row holds a data URL",
+);
+
+click($$("[data-photo-remove]")[0]);
+check($$("[data-photo]").length === 2, "a row can be removed");
+check(
+  $$("[data-photo]")[0].dataset.photo ===
+    "https://images.unsplash.com/photo-222",
+  "the other photos stay",
+);
+
+/* ---------- saving persists the gallery ---------- */
+one("#f-title").value = "Photo test";
+one("[data-photo-url]").value = "https://images.unsplash.com/photo-999";
+$$("[data-item]")[0].value = "1 pinch salt";
+$$("[data-step]")[0].value = "Stir.";
+
+one("[data-form]").dispatchEvent(
+  new window.Event("submit", { bubbles: true, cancelable: true }),
+);
+check(one("[data-error]").hidden === true, "save with photos succeeds");
+const withPhotos = getRecipe("photo-test");
+check(Boolean(withPhotos), "recipe saved under its slug");
+check(withPhotos?.photos?.length === 2, "both photos persisted");
+check(
+  withPhotos?.photos?.[0] === "https://images.unsplash.com/photo-222",
+  "the link photo persisted",
+);
+check(
+  withPhotos?.photos?.[1]?.startsWith("data:image/jpeg"),
+  "the uploaded photo persisted",
+);
+
+/* ---------- detail view: scrollable gallery ---------- */
+renderRecipe(root, { nav: "", slug: "photo-test" });
+check($$(".gallery__item").length === 2, "detail page shows the gallery");
+check(
+  one(".gallery img")?.getAttribute("src") ===
+    "https://images.unsplash.com/photo-222",
+  "gallery image points at the saved photo",
+);
+renderRecipe(root, { nav: "", slug: "old-stew" });
+check($$(".gallery").length === 0, "no gallery section without photos");
 
 console.log(`OK — ${checks} assertions passed, 0 failed`);

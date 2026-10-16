@@ -39,6 +39,30 @@ function ratingMarkup(rating) {
     </div>`;
 }
 
+/** Extra photos beyond the cover — a horizontally scrollable strip. */
+function galleryMarkup(recipe) {
+  const photos = recipe.photos ?? [];
+  if (!photos.length) return "";
+  const count = photos.length === 1 ? "1 photo" : `${photos.length} photos`;
+  return `
+    <section class="section">
+      ${sectionLabel("More from this recipe", count)}
+      <div class="gallery">
+        ${photos
+          .map(
+            (src, index) => `
+          <figure class="frame gallery__item">
+            <div class="frame__box ratio--card">
+              <img src="${escapeHtml(src)}" alt="${escapeHtml(recipe.title)} — photo ${index + 1}"
+                loading="lazy" decoding="async">
+            </div>
+          </figure>`,
+          )
+          .join("")}
+      </div>
+    </section>`;
+}
+
 function ingredientsMarkup(recipe) {
   return `
     <ul class="ingredient-list">
@@ -109,6 +133,8 @@ export function renderRecipe(root, { nav = "", slug = "" } = {}) {
       ])}
 
       ${recipe.intro ? `<p class="detail__intro">${escapeHtml(recipe.intro)}</p>` : ""}
+
+      ${galleryMarkup(recipe)}
 
       <section class="section">
         ${sectionLabel("Ingredients")}
