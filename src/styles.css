@@ -788,19 +788,49 @@ button {
   margin-top: 1rem;
 }
 
-.delete-confirm {
-  border: 1px solid var(--destructive);
-  background: #b91c1c0d;
-  padding: 1.25rem;
+/* ---------------------------------------------------- confirm window */
+
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: #1c1a1759; /* foreground @ 35% */
+  opacity: 0;
+  transition: opacity 200ms ease;
 }
 
-.delete-confirm__text {
-  margin: 0 0 1rem;
-  max-width: 55ch;
-  font-size: 0.9375rem;
+.confirm-overlay--visible {
+  opacity: 1;
 }
 
-.delete-confirm__actions {
+.confirm {
+  width: min(26rem, 100%);
+  padding: 1.5rem;
+  background: var(--background);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 1.25rem 3rem #1c1a1726;
+  transform: translateY(0.5rem);
+  transition: transform 200ms ease;
+}
+
+.confirm-overlay--visible .confirm {
+  transform: none;
+}
+
+.confirm__text {
+  margin: 0 0 1.25rem;
+  max-width: 40ch;
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+
+.confirm__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;

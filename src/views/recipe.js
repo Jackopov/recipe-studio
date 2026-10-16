@@ -7,6 +7,7 @@
 import { getRecipe, removeRecipe, saveRating } from "../store.js";
 import { formatDate, resolvePhoto } from "../data/recipes.js";
 import {
+  confirmWindow,
   escapeHtml,
   framedPhoto,
   metaStrip,
@@ -160,33 +161,17 @@ export function renderRecipe(root, { nav = "", slug = "" } = {}) {
     });
   });
 
-  // Delete: first press arms the confirmation, second press removes it.
-  const zone = root.querySelector("[data-delete-zone]");
-  zone
-    ?.querySelector("[data-delete-request]")
-    ?.addEventListener("click", () => {
-      zone.innerHTML = `
-      <div class="delete-confirm">
-        <p class="delete-confirm__text">
-          Delete “${escapeHtml(recipe.title)}” for good? This cannot be undone.
-        </p>
-        <div class="delete-confirm__actions">
-          <button type="button" class="btn btn--danger-solid" data-delete-confirm>Delete</button>
-          <button type="button" class="btn btn--outline" data-delete-cancel>Keep it</button>
-        </div>
-      </div>`;
-      zone
-        .querySelector("[data-delete-confirm]")
-        .addEventListener("click", () => {
-          removeRecipe(recipe.slug);
-          toast("Recipe deleted.");
-          window.history.pushState({}, "", appUrl("/recipes"));
-          window.dispatchEvent(new PopStateEvent("popstate"));
-        });
-      zone
-        .querySelector("[data-delete-cancel]")
-        .addEventListener("click", () => {
-          renderRecipe(root, { nav, slug });
-        });
+  // Delete — always ask in a confirmation window first.
+  root
+    .querySelector("[data-delete-request]")
+    ?.addEventListener("click", async () => {
+      const confirmed = await confirmWindow(
+        "Do you want to delete this tasty recipe?",
+      );
+      if (!confirmed) return;
+      removeRecipe(recipe.slug);
+      toast("Recipe deleted.");
+      window.history.pushState({}, "", appUrl("/recipes"));
+      window.dispatchEvent(new PopStateEvent("popstate"));
     });
 }

@@ -35,7 +35,7 @@ src/
   lib/photo.js        downscales uploaded photos into localStorage-friendly data URLs
   views/              one module per screen (see table above)
 public/               logo, PWA icons, manifest
-tests/                form interaction tests (happy-dom)
+tests/                view interaction tests (happy-dom)
 src/convex/           optional Convex backend kept intact but unused by the UI
 ```
 
@@ -97,7 +97,7 @@ midnight.
 bun run dev        # Vite dev server
 bun run build      # tsc -b (typechecks the Convex functions) + vite build
 bun run lint       # eslint
-bun run test       # form interaction tests (happy-dom): add/remove rows, save
+bun run test       # view tests (happy-dom): form rows, delete confirmation
 bun run format     # prettier --write .
 ```
 

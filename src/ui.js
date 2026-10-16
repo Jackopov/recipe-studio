@@ -145,6 +145,54 @@ export function recipeCard(recipe, badge = "") {
 }
 
 /**
+ * A confirmation window in the app's own style, used instead of the native
+ * confirm() — browsers block that one inside sandboxed preview frames.
+ * Resolves true when the user confirms; Escape, the backdrop and "Keep it"
+ * all decline.
+ */
+export function confirmWindow(message) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "confirm-overlay";
+    overlay.innerHTML = `
+      <div class="confirm" role="alertdialog" aria-modal="true" aria-describedby="confirm-text">
+        <p class="confirm__text" id="confirm-text">${escapeHtml(message)}</p>
+        <div class="confirm__actions">
+          <button type="button" class="btn btn--danger-solid" data-confirm-yes>Delete</button>
+          <button type="button" class="btn btn--outline" data-confirm-no>Keep it</button>
+        </div>
+      </div>`;
+
+    const close = (answer) => {
+      document.removeEventListener("keydown", onKeyDown);
+      overlay.remove();
+      resolve(answer);
+    };
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") close(false);
+    };
+
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) close(false); // clicked outside the card
+    });
+    overlay
+      .querySelector("[data-confirm-yes]")
+      .addEventListener("click", () => close(true));
+    overlay
+      .querySelector("[data-confirm-no]")
+      .addEventListener("click", () => close(false));
+    document.addEventListener("keydown", onKeyDown);
+
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() =>
+      overlay.classList.add("confirm-overlay--visible"),
+    );
+    // The safe option holds focus, so a stray Enter never deletes anything.
+    overlay.querySelector("[data-confirm-no]").focus();
+  });
+}
+
+/**
  * Toasts replace the old sonner toaster: a single snackbar that fades away.
  * kind: "success" | "error".
  */
