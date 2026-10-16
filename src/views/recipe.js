@@ -14,6 +14,7 @@ import {
   sectionLabel,
   toast,
 } from "../ui.js";
+import { appUrl } from "../base.js";
 
 function ratingMarkup(rating) {
   const stars = [1, 2, 3, 4, 5]
@@ -77,7 +78,7 @@ function stepsMarkup(steps) {
 export function renderRecipe(root, { nav = "", slug = "" } = {}) {
   const recipe = getRecipe(slug);
   if (!recipe) {
-    window.history.replaceState({}, "", "/404");
+    window.history.replaceState({}, "", appUrl("/404"));
     window.dispatchEvent(new PopStateEvent("popstate"));
     return;
   }
@@ -85,13 +86,13 @@ export function renderRecipe(root, { nav = "", slug = "" } = {}) {
   const main = `
     <article class="detail">
       <p class="detail__back">
-        <a class="nav-link" href="/recipes">← Back to the database</a>
+        <a class="nav-link" href="${appUrl("/recipes")}">← Back to the database</a>
       </p>
 
       <p class="kicker-row">
         <span class="eyebrow">${escapeHtml(recipe.category)} · ${formatDate(recipe.createdAt)}</span>
         <span class="kicker-row__rule"></span>
-        <a class="nav-link" href="/recipes/${encodeURIComponent(recipe.slug)}/edit">Edit</a>
+        <a class="nav-link" href="${appUrl(`/recipes/${encodeURIComponent(recipe.slug)}/edit`)}">Edit</a>
       </p>
 
       <h1 class="detail__title">${escapeHtml(recipe.title)}</h1>
@@ -184,7 +185,7 @@ export function renderRecipe(root, { nav = "", slug = "" } = {}) {
         .addEventListener("click", () => {
           removeRecipe(recipe.slug);
           toast("Recipe deleted.");
-          window.history.pushState({}, "", "/recipes");
+          window.history.pushState({}, "", appUrl("/recipes"));
           window.dispatchEvent(new PopStateEvent("popstate"));
         });
       zone

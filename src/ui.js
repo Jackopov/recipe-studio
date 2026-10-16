@@ -4,6 +4,7 @@
  * the star rows — the HTML counterparts of the old React components.
  */
 
+import { appUrl } from "./base.js";
 import { categoryLabel, resolvePhoto } from "./data/recipes.js";
 
 const SVG_STAR =
@@ -21,20 +22,20 @@ export function escapeHtml(value) {
 
 /** Shared markup for quiet text links next to the Add button. */
 export function navLink(href, label) {
-  return `<a class="nav-link" href="${href}">${escapeHtml(label)}</a>`;
+  return `<a class="nav-link" href="${escapeHtml(appUrl(href))}">${escapeHtml(label)}</a>`;
 }
 
 export function siteHeader(navHtml = "") {
   return `
     <header class="site-header">
       <div class="site-header__inner shell">
-        <a class="brand" href="/">
+        <a class="brand" href="${appUrl("/")}">
           <span class="brand__mark"><span class="brand__dot"></span></span>
           <span class="brand__name">Recipe Studio</span>
         </a>
         <div class="header-actions">
           ${navHtml}
-          <a class="btn btn--outline btn--add" href="/recipes/new" aria-label="Add a recipe">
+          <a class="btn btn--outline btn--add" href="${appUrl("/recipes/new")}" aria-label="Add a recipe">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
             Add
           </a>
@@ -126,7 +127,7 @@ function cardTimes(recipe) {
 /** The card shared by the homepage collection and the database. */
 export function recipeCard(recipe, badge = "") {
   return `
-    <a class="recipe-card" href="/recipes/${encodeURIComponent(recipe.slug)}">
+    <a class="recipe-card" href="${appUrl(`/recipes/${encodeURIComponent(recipe.slug)}`)}">
       <span class="recipe-card__frame">
         <span class="recipe-card__box ratio--card">
           <img src="${escapeHtml(resolvePhoto(recipe.photo, 800))}"

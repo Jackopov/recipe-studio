@@ -3,11 +3,13 @@
  * paths the app always had (/recipes/:slug and friends).
  */
 
+import { appUrl, routePath } from "./base.js";
+
 let renderRoute = () => {};
 
-/** Push a path and re-render. */
+/** Push an app path (under any deploy base) and re-render. */
 export function navigate(path, { replace = false } = {}) {
-  const url = new URL(path, window.location.origin);
+  const url = new URL(appUrl(path), window.location.origin);
   const target = url.pathname + url.search + url.hash;
   const current =
     window.location.pathname + window.location.search + window.location.hash;
@@ -51,7 +53,7 @@ export function startRouter(render) {
   const notify = () => {
     try {
       window.parent.postMessage(
-        { type: "iframe-route-change", path: window.location.pathname },
+        { type: "iframe-route-change", path: routePath() },
         "*",
       );
     } catch {

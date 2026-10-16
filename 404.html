@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Opening Recipe Studio…</title>
+    <script>
+      /**
+       * Static hosts (GitHub Pages) answer every unknown path with this file
+       * instead of index.html, so a deep link like /recipe-studio/recipes/slug
+       * never reaches the single-page app. Park the route, find the directory
+       * that actually contains the app, and reload from there — the app
+       * restores the route from sessionStorage on boot.
+       */
+      (async () => {
+        const route =
+          location.pathname.replace(/^\/+/, "/") +
+          location.search +
+          location.hash;
+
+        const segments = location.pathname.split("/").filter(Boolean);
+        const roots = ["/"];
+        for (let depth = 1; depth < segments.length; depth++) {
+          roots.push(`/${segments.slice(0, depth).join("/")}/`);
+        }
+
+        const isAppRoot = async (root) => {
+          try {
+            const response = await fetch(`${root}src/app.js`, {
+              method: "HEAD",
+            });
+            return response.ok;
+          } catch {
+            return false;
+          }
+        };
+
+        for (const root of roots) {
+          if (await isAppRoot(root)) {
+            try {
+              sessionStorage.setItem("recipe-studio:route", route);
+            } catch {
+              // Storage unavailable — land on the root instead.
+            }
+            location.replace(root);
+            return;
+          }
+        }
+
+        document.body.textContent =
+          "This address is not part of Recipe Studio.";
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>

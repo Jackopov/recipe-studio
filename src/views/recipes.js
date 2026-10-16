@@ -3,6 +3,7 @@
 import { listRecipes } from "../store.js";
 import { categoryLabel, RECIPE_CATEGORIES } from "../data/recipes.js";
 import { pageShell, recipeCard, sectionLabel } from "../ui.js";
+import { appUrl } from "../base.js";
 
 const SORTS = [
   { key: "newest", label: "Newest" },
@@ -106,7 +107,11 @@ export function renderRecipes(
       if (key === "all") next.delete("category");
       else next.set("category", key);
       const query = next.toString();
-      window.history.pushState({}, "", `/recipes${query ? `?${query}` : ""}`);
+      window.history.pushState(
+        {},
+        "",
+        appUrl(`/recipes${query ? `?${query}` : ""}`),
+      );
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
   });
@@ -118,7 +123,11 @@ export function renderRecipes(
       if (key === "newest") next.delete("sort");
       else next.set("sort", key);
       const query = next.toString();
-      window.history.pushState({}, "", `/recipes${query ? `?${query}` : ""}`);
+      window.history.pushState(
+        {},
+        "",
+        appUrl(`/recipes${query ? `?${query}` : ""}`),
+      );
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
   });

@@ -5,6 +5,7 @@
  */
 
 import { startRouter } from "./router.js";
+import { appUrl, routePath } from "./base.js";
 import { navLink } from "./ui.js";
 import { renderHome } from "./views/home.js";
 import { renderRecipes } from "./views/recipes.js";
@@ -30,7 +31,9 @@ function navFor(pathname) {
 }
 
 function render() {
-  const { pathname } = window.location;
+  // The URL without the deploy base, so the same paths work at "/" and
+  // under a published sub-path like "/recipe-studio/".
+  const pathname = routePath();
   const nav = navFor(pathname);
 
   if (pathname === "/") {
@@ -48,6 +51,7 @@ function render() {
   } else {
     const editMatch = pathname.match(/^\/recipes\/([^/]+)\/edit$/);
     const detailMatch = pathname.match(/^\/recipes\/([^/]+)$/);
+
     if (editMatch) {
       const slug = decodeURIComponent(editMatch[1]);
       document.title = `Edit — ${slug.replace(/-/g, " ")} — Recipe Studio`;
@@ -79,5 +83,58 @@ window.addEventListener(
   true,
 );
 
+/**
+ * Icon and manifest live in public/ — served from the site root by the dev
+ * server, but kept under their folder name in a published copy of the repo.
+ * Probe both locations so neither layout logs a 404.
+ */
+async function firstThatExists(candidates) {
+  for (const candidate of candidates) {
+    try {
+      const response = await fetch(candidate, { method: "HEAD" });
+      if (response.ok) return candidate;
+    } catch {
+      // Network hiccup — try the next location.
+    }
+  }
+  return null;
+}
+
+async function loadAppLinks() {
+  const iconCandidates = [appUrl("logo.svg"), appUrl("public/logo.svg")];
+  const manifestCandidates = [
+    appUrl("manifest.webmanifest"),
+    appUrl("public/manifest.webmanifest"),
+  ];
+  const [icon, manifest] = await Promise.all([
+    firstThatExists(iconCandidates),
+    firstThatExists(manifestCandidates),
+  ]);
+
+  const manifestLink = document.createElement("link");
+  manifestLink.rel = "manifest";
+  manifestLink.href = manifest ?? manifestCandidates[0];
+  document.head.appendChild(manifestLink);
+
+  const iconLink = document.createElement("link");
+  iconLink.rel = "icon";
+  iconLink.type = "image/svg+xml";
+  iconLink.href = icon ?? iconCandidates[0];
+  document.head.appendChild(iconLink);
+}
+
+// A static host answers unknown paths with 404.html, which parks the deep
+// route here before reloading the app root (see 404.html).
+try {
+  const parked = window.sessionStorage.getItem("recipe-studio:route");
+  if (parked) {
+    window.sessionStorage.removeItem("recipe-studio:route");
+    window.history.replaceState({}, "", appUrl(parked));
+  }
+} catch {
+  // Storage unavailable — nothing parked.
+}
+
+loadAppLinks();
 startRouter(render);
 render();

@@ -2,7 +2,6 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
@@ -19,8 +18,32 @@
       content="Your recipes, beautifully kept. Today's special on the first screen."
     />
     <meta property="og:type" content="website" />
-    <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="stylesheet" href="/src/styles.css" />
+    <script>
+      /**
+       * The app may be served from a sub-path (a GitHub Pages project site,
+       * for example) rather than the server root. Assets are therefore
+       * requested relative to wherever index.html was published; when a URL
+       * misses, walk one directory up and finally try the server root.
+       */
+      window.assetFallback = function (element) {
+        const chain = (element.dataset.fallback || "")
+          .split("|")
+          .filter(Boolean);
+        const next = chain.shift();
+        element.dataset.fallback = chain.join("|");
+        if (next) {
+          element.setAttribute(element.dataset.attr || "href", next);
+        } else {
+          element.removeAttribute("onerror");
+        }
+      };
+    </script>
+    <link
+      rel="stylesheet"
+      href="./src/styles.css"
+      data-fallback="../src/styles.css|../../src/styles.css|/src/styles.css"
+      onerror="assetFallback(this)"
+    />
   </head>
   <body>
     <div id="app">
@@ -28,6 +51,12 @@
         Recipe Studio is a small offline notebook and needs JavaScript to open.
       </noscript>
     </div>
-    <script type="module" src="/src/app.js"></script>
+    <script
+      type="module"
+      src="./src/app.js"
+      data-attr="src"
+      data-fallback="../src/app.js|../../src/app.js|/src/app.js"
+      onerror="assetFallback(this)"
+    ></script>
   </body>
 </html>

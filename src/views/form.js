@@ -7,6 +7,7 @@
 import { createRecipe, getRecipe, updateRecipe } from "../store.js";
 import { RECIPE_CATEGORIES } from "../data/recipes.js";
 import { photoToDataUrl } from "../lib/photo.js";
+import { appUrl } from "../base.js";
 import { escapeHtml, pageShell, sectionLabel, toast } from "../ui.js";
 
 function photoFromValue(value) {
@@ -65,7 +66,7 @@ export function renderRecipeForm(
 ) {
   const existing = slug ? getRecipe(slug) : null;
   if (slug && !existing) {
-    window.history.replaceState({}, "", "/404");
+    window.history.replaceState({}, "", appUrl("/404"));
     window.dispatchEvent(new PopStateEvent("popstate"));
     return;
   }
@@ -118,11 +119,11 @@ export function renderRecipeForm(
       main: `
         <section class="form-page">
           <p class="detail__back">
-            <a class="nav-link" href="${
+            <a class="nav-link" href="${appUrl(
               existing
                 ? `/recipes/${encodeURIComponent(existing.slug)}`
-                : "/recipes"
-            }">← ${existing ? "Back to the recipe" : "Back to the database"}</a>
+                : "/recipes",
+            )}">← ${existing ? "Back to the recipe" : "Back to the database"}</a>
           </p>
           <p class="eyebrow">${mode === "edit" ? "Edit recipe" : "New recipe"}</p>
           <h1 class="page-title">${mode === "edit" ? "Revise the page." : "Add a page."}</h1>
@@ -232,11 +233,11 @@ export function renderRecipeForm(
               <button class="btn btn--primary" type="submit">
                 ${mode === "edit" ? "Save changes" : "Save recipe"}
               </button>
-              <a class="nav-link" href="${
+              <a class="nav-link" href="${appUrl(
                 existing
                   ? `/recipes/${encodeURIComponent(existing.slug)}`
-                  : "/recipes"
-              }">Cancel</a>
+                  : "/recipes",
+              )}">Cancel</a>
             </div>
           </form>
         </section>`,
@@ -503,7 +504,7 @@ export function renderRecipeForm(
         window.history.pushState(
           {},
           "",
-          `/recipes/${encodeURIComponent(saved.slug)}`,
+          appUrl(`/recipes/${encodeURIComponent(saved.slug)}`),
         );
         window.dispatchEvent(new PopStateEvent("popstate"));
       } catch (error) {

@@ -14,6 +14,7 @@ import {
   recipeCard,
   sectionLabel,
 } from "../ui.js";
+import { appUrl } from "../base.js";
 
 const CATEGORIES = [
   { key: "breakfast", label: "Breakfast", href: "/recipes?category=breakfast" },
@@ -38,7 +39,7 @@ export function renderHome(root, { nav = "" } = {}) {
         <h1 class="hero-title">${special.title}</h1>
         ${special.note ? `<p class="hero-note">${special.note}</p>` : ""}
         <p class="hero-cta">
-          <a class="btn btn--primary" href="/recipes/${encodeURIComponent(special.slug)}">Cook the special</a>
+          <a class="btn btn--primary" href="${appUrl(`/recipes/${encodeURIComponent(special.slug)}`)}">Cook the special</a>
           <a class="nav-link" href="#collection">Browse the collection →</a>
         </p>
         ${framedPhoto({
@@ -58,7 +59,7 @@ export function renderHome(root, { nav = "" } = {}) {
         <p class="eyebrow">Nothing on the counter</p>
         <h1 class="hero-title">The studio is empty.</h1>
         <p class="lede">Add the first recipe and today's special will write itself.</p>
-        <p class="hero-cta"><a class="btn btn--primary" href="/recipes/new">Add a recipe</a></p>
+        <p class="hero-cta"><a class="btn btn--primary" href="${appUrl("/recipes/new")}">Add a recipe</a></p>
       </section>`;
 
   const cards = recipes
@@ -73,7 +74,7 @@ export function renderHome(root, { nav = "" } = {}) {
       ${hero}
 
       <section class="section" id="collection">
-        ${sectionLabel("The collection", `<a class="section-label__link" href="/recipes">View all →</a>`)}
+        ${sectionLabel("The collection", `<a class="section-label__link" href="${appUrl("/recipes")}">View all →</a>`)}
         <div class="card-grid">${cards}</div>
       </section>
 
@@ -82,7 +83,7 @@ export function renderHome(root, { nav = "" } = {}) {
         <div class="chips">
           ${CATEGORIES.map(
             (category) =>
-              `<a class="chip" href="${category.href}">${category.label}</a>`,
+              `<a class="chip" href="${appUrl(category.href)}">${category.label}</a>`,
           ).join("")}
         </div>
       </section>
@@ -108,8 +109,8 @@ export function renderHome(root, { nav = "" } = {}) {
         ${sectionLabel("Start cooking")}
         <p class="cta__line">Have a dish worth keeping?</p>
         <p class="hero-cta">
-          <a class="btn btn--primary" href="/recipes/new">Add a recipe</a>
-          <a class="nav-link" href="/recipes">Open the database →</a>
+          <a class="btn btn--primary" href="${appUrl("/recipes/new")}">Add a recipe</a>
+          <a class="nav-link" href="${appUrl("/recipes")}">Open the database →</a>
         </p>
       </section>`,
   });

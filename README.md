@@ -22,9 +22,11 @@ The history-API router in `src/router.js` maps real URLs onto views:
 ## Structure
 
 ```
-index.html            entry — loads /src/styles.css and /src/app.js
+index.html            entry — loads ./src/styles.css and ./src/app.js
+404.html              static-host fallback: parks deep routes, reloads the app root
 src/
   app.js              boot: routes the URL onto a view, per-route nav/title
+  base.js             deploy base — where the app is published (root or sub-path)
   router.js           tiny history router (clicks, back/forward, preview frame)
   ui.js               shared markup: masthead, frames, labels, cards, toasts
   store.js            the collection — localStorage CRUD + seed on first run
@@ -35,6 +37,26 @@ src/
 public/               logo, PWA icons, manifest
 src/convex/           optional Convex backend kept intact but unused by the UI
 ```
+
+## Publishing
+
+Nothing is bound to the server root, so the same files work at a domain root
+and under a sub-path (a GitHub Pages project site, for instance):
+
+- `src/base.js` derives the base from where the app's own modules were loaded
+  (`/src/base.js` → `/`, `/recipe-studio/src/base.js` → `/recipe-studio/`);
+  every link and history update goes through `appUrl()`, and the router
+  matches routes on `routePath()` with the base stripped.
+- `index.html` requests its assets relative to wherever the page was
+  published, walking one directory up and finally trying the server root if a
+  URL misses.
+- `404.html` covers static hosts without rewrites: it records the deep route,
+  finds the directory that actually contains the app, reloads from there and
+  the app restores the route from `sessionStorage` on boot.
+- The icon and manifest links are resolved at runtime by probing the site
+  root and `public/` (the dev server maps `public/` to the root, a raw
+  published copy keeps the folder name), and the manifest itself uses
+  relative URLs, so neither layout logs a 404.
 
 ## Data model
 

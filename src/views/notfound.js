@@ -1,6 +1,7 @@
 /** Two-line 404 — the studio has wandered off the edge of the map. */
 
 import { pageShell } from "../ui.js";
+import { appUrl } from "../base.js";
 
 export function renderNotFound(root, { nav = "" } = {}) {
   root.innerHTML = pageShell({
@@ -13,8 +14,8 @@ export function renderNotFound(root, { nav = "" } = {}) {
           This page was never in the studio, or the link is slightly off.
         </p>
         <p class="actions">
-          <a class="btn btn--primary" href="/">Back to today's special</a>
-          <a class="nav-link" href="/recipes">The database →</a>
+          <a class="btn btn--primary" href="${appUrl("/")}">Back to today's special</a>
+          <a class="nav-link" href="${appUrl("/recipes")}">The database →</a>
         </p>
       </section>`,
   });
