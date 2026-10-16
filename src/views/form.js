@@ -1,7 +1,7 @@
 /**
  * The shared editor behind "New recipe" and "Edit recipe": title, note, intro,
- * photograph (file → local data URL or a direct link), meta fields, ordered
- * ingredient groups and steps, tips — plus validation and the local save.
+ * photograph (file → local data URL or a direct link), meta fields, the
+ * ingredient list, steps and tips — plus validation and the local save.
  */
 
 import { createRecipe, getRecipe, updateRecipe } from "../store.js";
@@ -35,7 +35,7 @@ function defaultsFor(recipe) {
       prep: "",
       cook: "",
       serves: "",
-      ingredients: [{ section: "", items: [""] }],
+      ingredients: [""],
       steps: [""],
       tips: [""],
     };
@@ -51,10 +51,7 @@ function defaultsFor(recipe) {
     prep: recipe.prep === "—" ? "" : recipe.prep,
     cook: recipe.cook === "—" ? "" : recipe.cook,
     serves: recipe.serves === "—" ? "" : recipe.serves,
-    ingredients: recipe.ingredients.map((group) => ({
-      section: group.section ?? "",
-      items: [...group.items],
-    })),
+    ingredients: [...recipe.ingredients],
     steps: [...recipe.steps],
     tips: [...(recipe.tips ?? [])],
   };
@@ -72,29 +69,13 @@ export function renderRecipeForm(
   }
   const draft = defaultsFor(existing);
 
-  const groupMarkup = (group, index) => `
-    <div class="group" data-group="${index}">
-      <div class="group__row">
-        <input class="input group__section" type="text" placeholder="Section (optional — e.g. For the dressing)"
-          value="${escapeHtml(group.section)}" data-group-section="${index}">
-        <button type="button" class="btn btn--ghost btn--small" data-group-remove="${index}"
-          ${draft.ingredients.length === 1 ? "disabled" : ""}>Remove group</button>
-      </div>
-      <ul class="group__items">
-        ${group.items
-          .map(
-            (item, itemIndex) => `
-          <li class="group__item">
-            <input class="input" type="text" placeholder="Ingredient"
-              value="${escapeHtml(item)}" data-item="${index}:${itemIndex}">
-            <button type="button" class="btn btn--ghost btn--small" data-item-remove="${index}:${itemIndex}"
-              ${group.items.length === 1 ? "disabled" : ""}>×</button>
-          </li>`,
-          )
-          .join("")}
-      </ul>
-      <button type="button" class="nav-link" data-item-add="${index}">+ Add ingredient</button>
-    </div>`;
+  const ingredientMarkup = (item, index) => `
+    <li class="group__item">
+      <input class="input" type="text" placeholder="Ingredient"
+        value="${escapeHtml(item)}" data-item="${index}">
+      <button type="button" class="btn btn--ghost btn--small" data-item-remove="${index}"
+        ${draft.ingredients.length === 1 ? "disabled" : ""}>×</button>
+    </li>`;
 
   const stepMarkup = (step, index) => `
     <li class="group__item">
@@ -114,6 +95,9 @@ export function renderRecipeForm(
     </li>`;
 
   const render = () => {
+    // Re-rendering swaps the whole page — hold the scroll place so the row
+    // that was just added stays in view.
+    const scrollY = window.scrollY;
     root.innerHTML = pageShell({
       nav,
       main: `
@@ -207,10 +191,10 @@ export function renderRecipeForm(
 
             <section class="form-section">
               ${sectionLabel("Ingredients")}
-              <div data-groups>
-                ${draft.ingredients.map(groupMarkup).join("")}
-              </div>
-              <button type="button" class="nav-link" data-group-add>+ Add a group</button>
+              <ul class="group__items" data-ingredients>
+                ${draft.ingredients.map(ingredientMarkup).join("")}
+              </ul>
+              <button type="button" class="nav-link" data-item-add>+ Add ingredient</button>
             </section>
 
             <section class="form-section">
@@ -243,6 +227,7 @@ export function renderRecipeForm(
         </section>`,
     });
     wire();
+    window.scrollTo(0, scrollY);
   };
 
   function readDraftFromDom() {
@@ -262,20 +247,15 @@ export function renderRecipeForm(
       prep: $("#f-prep").value.trim() || "—",
       cook: $("#f-cook").value.trim() || "—",
       serves: $("#f-serves").value.trim() || "—",
-      ingredients: [...root.querySelectorAll("[data-group-section]")].map(
-        (sectionInput, index) => ({
-          section: sectionInput.value.trim() || undefined,
-          items: [...root.querySelectorAll(`[data-item^="${index}:"]`)]
-            .map((input) => input.value.trim())
-            .filter(Boolean),
-        }),
+      // Read raw so empty placeholder rows survive a re-render; values are
+      // trimmed and empty ones dropped only when the recipe is saved.
+      ingredients: [...root.querySelectorAll("[data-item]")].map(
+        (input) => input.value,
       ),
-      steps: [...root.querySelectorAll("[data-step]")]
-        .map((area) => area.value.trim())
-        .filter(Boolean),
-      tips: [...root.querySelectorAll("[data-tip]")]
-        .map((area) => area.value.trim())
-        .filter(Boolean),
+      steps: [...root.querySelectorAll("[data-step]")].map(
+        (area) => area.value,
+      ),
+      tips: [...root.querySelectorAll("[data-tip]")].map((area) => area.value),
     };
   }
 
@@ -343,65 +323,10 @@ export function renderRecipeForm(
         }
       });
 
-    // Dynamic ingredient groups.
-    const rerenderGroups = (ingredients) => {
-      draft.ingredients = ingredients;
-      // Preserve what's typed right now before re-rendering.
-      const current = readDraftFromDom();
-      draft.ingredients = current.ingredients;
-      draft.title = current.title;
-      draft.note = current.note;
-      draft.intro = current.intro;
-      draft.photoValue = current.photoValue;
-      draft.photoAlt = current.photoAlt;
-      draft.prep = current.prep === "—" ? "" : current.prep;
-      draft.cook = current.cook === "—" ? "" : current.cook;
-      draft.serves = current.serves === "—" ? "" : current.serves;
-      draft.steps = current.steps.length ? current.steps : [""];
-      draft.tips = current.tips.length ? current.tips : [""];
-      render();
-    };
-
-    root.querySelectorAll("[data-item-add]").forEach((button) =>
-      button.addEventListener("click", () => {
-        const index = Number(button.dataset.itemAdd);
-        const current = readDraftFromDom();
-        current.ingredients[index].items.push("");
-        rerenderGroups(current.ingredients);
-      }),
-    );
-    root.querySelectorAll("[data-group-add]").forEach((button) =>
-      button.addEventListener("click", () => {
-        const current = readDraftFromDom();
-        current.ingredients.push({ section: "", items: [""] });
-        rerenderGroups(current.ingredients);
-      }),
-    );
-    root.querySelectorAll("[data-group-remove]").forEach((button) =>
-      button.addEventListener("click", () => {
-        const index = Number(button.dataset.groupRemove);
-        const current = readDraftFromDom();
-        if (current.ingredients.length > 1) {
-          current.ingredients.splice(index, 1);
-          rerenderGroups(current.ingredients);
-        }
-      }),
-    );
-    root.querySelectorAll("[data-item-remove]").forEach((button) =>
-      button.addEventListener("click", () => {
-        const [index, itemIndex] = button.dataset.itemRemove
-          .split(":")
-          .map(Number);
-        const current = readDraftFromDom();
-        if (current.ingredients[index].items.length > 1) {
-          current.ingredients[index].items.splice(itemIndex, 1);
-          rerenderGroups(current.ingredients);
-        }
-      }),
-    );
-
-    // Steps & tips lists.
-    const rerenderLists = () => {
+    // Pull everything currently typed into the draft. Mutations (adding or
+    // removing a row) run *after* this — reading the DOM again afterwards
+    // would throw away the row that was just added.
+    const syncDraft = () => {
       const current = readDraftFromDom();
       draft.title = current.title;
       draft.note = current.note;
@@ -415,38 +340,57 @@ export function renderRecipeForm(
       draft.ingredients = current.ingredients;
       draft.steps = current.steps;
       draft.tips = current.tips;
-      render();
     };
 
+    root.querySelector("[data-item-add]")?.addEventListener("click", () => {
+      syncDraft();
+      draft.ingredients.push("");
+      render();
+      root
+        .querySelectorAll("[data-item]")
+        [draft.ingredients.length - 1]?.focus();
+    });
+    root.querySelectorAll("[data-item-remove]").forEach((button) =>
+      button.addEventListener("click", () => {
+        const index = Number(button.dataset.itemRemove);
+        syncDraft();
+        if (draft.ingredients.length > 1) {
+          draft.ingredients.splice(index, 1);
+          render();
+        }
+      }),
+    );
+
     root.querySelector("[data-step-add]")?.addEventListener("click", () => {
-      const current = readDraftFromDom();
-      draft.steps = [...current.steps, ""];
-      rerenderLists();
+      syncDraft();
+      draft.steps.push("");
+      render();
       root.querySelectorAll("[data-step]")[draft.steps.length - 1]?.focus();
     });
     root.querySelectorAll("[data-step-remove]").forEach((button) =>
       button.addEventListener("click", () => {
-        const current = readDraftFromDom();
-        if (current.steps.length > 1) {
-          current.steps.splice(Number(button.dataset.stepRemove), 1);
-          draft.steps = current.steps;
-          rerenderLists();
+        const index = Number(button.dataset.stepRemove);
+        syncDraft();
+        if (draft.steps.length > 1) {
+          draft.steps.splice(index, 1);
+          render();
         }
       }),
     );
+
     root.querySelector("[data-tip-add]")?.addEventListener("click", () => {
-      const current = readDraftFromDom();
-      draft.tips = [...current.tips, ""];
-      rerenderLists();
+      syncDraft();
+      draft.tips.push("");
+      render();
       root.querySelectorAll("[data-tip]")[draft.tips.length - 1]?.focus();
     });
     root.querySelectorAll("[data-tip-remove]").forEach((button) =>
       button.addEventListener("click", () => {
-        const current = readDraftFromDom();
-        if (current.tips.length > 1) {
-          current.tips.splice(Number(button.dataset.tipRemove), 1);
-          draft.tips = current.tips;
-          rerenderLists();
+        const index = Number(button.dataset.tipRemove);
+        syncDraft();
+        if (draft.tips.length > 1) {
+          draft.tips.splice(index, 1);
+          render();
         }
       }),
     );
@@ -471,10 +415,11 @@ export function renderRecipeForm(
         root.querySelector("#f-photo").focus();
         return;
       }
-      const ingredients = data.ingredients.filter(
-        (group) => group.items.length,
-      );
-      if (!ingredients.length || !data.steps.length) {
+      const clean = (list) => list.map((value) => value.trim()).filter(Boolean);
+      const ingredients = clean(data.ingredients);
+      const steps = clean(data.steps);
+      const tips = clean(data.tips);
+      if (!ingredients.length || !steps.length) {
         errorBox.hidden = false;
         errorBox.textContent =
           "Add at least one ingredient and one method step before saving.";
@@ -492,8 +437,8 @@ export function renderRecipeForm(
         cook: data.cook,
         serves: data.serves,
         ingredients,
-        steps: data.steps,
-        tips: data.tips,
+        steps,
+        tips,
       };
 
       try {

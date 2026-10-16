@@ -14,6 +14,22 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+/**
+ * Ingredients used to be stored as groups ({ section?, items: [...] }); the
+ * collection is one flat list now, so older saves are unwrapped on read.
+ */
+function migrateRecipe(recipe) {
+  const ingredients = recipe.ingredients;
+  if (!Array.isArray(ingredients) || ingredients.length === 0) return recipe;
+  if (ingredients.every((entry) => typeof entry === "string")) return recipe;
+  return {
+    ...recipe,
+    ingredients: ingredients.flatMap((group) =>
+      Array.isArray(group?.items) ? group.items : [],
+    ),
+  };
+}
+
 function read() {
   if (cache) return cache;
   try {
@@ -21,7 +37,7 @@ function read() {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        cache = parsed;
+        cache = parsed.map(migrateRecipe);
         return cache;
       }
     }

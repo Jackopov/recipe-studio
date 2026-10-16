@@ -35,6 +35,7 @@ src/
   lib/photo.js        downscales uploaded photos into localStorage-friendly data URLs
   views/              one module per screen (see table above)
 public/               logo, PWA icons, manifest
+tests/                form interaction tests (happy-dom)
 src/convex/           optional Convex backend kept intact but unused by the UI
 ```
 
@@ -68,7 +69,7 @@ A recipe record (see `src/store.js`) looks like:
   note, intro,                    // italic kicker, editorial paragraph
   photo: { src, alt, focus, resize },
   prep, cook, serves,             // free-text; "—" when absent
-  ingredients: [{ section?, items: [string] }],
+  ingredients: [string],              // one flat list — no sections/groups
   steps: [string],
   tips: [string] | undefined,
   rating,                         // 1–5 or null
@@ -78,7 +79,8 @@ A recipe record (see `src/store.js`) looks like:
 
 The store persists to `localStorage` under
 `recipe-studio:collection:v1`. The first load copies the seed collection in;
-afterwards the stored list wins. Uploaded photos are downscaled
+afterwards the stored list wins. Saves from older versions that still stored
+ingredients as groups (`{ section?, items: [...] }`) are flattened on read. Uploaded photos are downscaled
 (`lib/photo.js`) and embedded as data URLs, so nothing ever leaves the
 device. The slug is generated once from the title and never changes, which
 keeps links stable.
@@ -95,6 +97,7 @@ midnight.
 bun run dev        # Vite dev server
 bun run build      # tsc -b (typechecks the Convex functions) + vite build
 bun run lint       # eslint
+bun run test       # form interaction tests (happy-dom): add/remove rows, save
 bun run format     # prettier --write .
 ```
 

@@ -39,25 +39,20 @@ function ratingMarkup(rating) {
 }
 
 function ingredientsMarkup(recipe) {
-  return recipe.ingredients
-    .map((group) => {
-      const heading = group.section
-        ? `<h3 class="ingredient-section">${escapeHtml(group.section)}</h3>`
-        : "";
-      const items = group.items
+  return `
+    <ul class="ingredient-list">
+      ${recipe.ingredients
         .map(
           (item) => `
-          <li class="ingredient">
-            <label>
-              <input type="checkbox" class="ingredient__check">
-              <span class="ingredient__text">${escapeHtml(item)}</span>
-            </label>
-          </li>`,
+        <li class="ingredient">
+          <label>
+            <input type="checkbox" class="ingredient__check">
+            <span class="ingredient__text">${escapeHtml(item)}</span>
+          </label>
+        </li>`,
         )
-        .join("");
-      return `${heading}<ul class="ingredient-list">${items}</ul>`;
-    })
-    .join("");
+        .join("")}
+    </ul>`;
 }
 
 function stepsMarkup(steps) {
